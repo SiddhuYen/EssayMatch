@@ -649,61 +649,16 @@ Essay response:
 
         fallback_results.append(base_result)
 
-        if rank < GPT_RERANK_LIMIT:
-            try:
-                rerank = gpt_rerank_match(profile, row, candidate_essays) or {}
-
-                keep_match = bool(rerank.get("keep", True))
-                gpt_score = float(rerank.get("score", 0)) / 100
-
-                if not keep_match:
-                    rejected_key = str(clean_json_value(row.get("url", "")) or clean_json_value(row.get("Purpose", "")))
-                    rejected_keys.add(rejected_key)
-                    print(f"GPT rejected: {row.get('Purpose', '')}")
-                    continue
-
-                chosen_idx = int(rerank.get("best_essay_index", 0))
-                chosen_idx = max(0, min(chosen_idx, len(candidate_essays) - 1))
-
-                real_idx = candidate_essays[chosen_idx]["essay_index"]
-                best_essay = filtered[real_idx]
-
-                blended_score = 0.65 * base_score + 0.35 * gpt_score
-                generic_advice = {
-                    "review the scholarship requirements and tailor your essay.",
-                    "tailor your essay to the scholarship requirements.",
-                    "review the scholarship requirements.",
-                }
-
-                adaptation_advice = str(rerank.get("adaptation_advice", "") or "")
-
-                if adaptation_advice.strip().lower() in generic_advice:
-                    adaptation_advice = ""
-                
-                results.append({
-                    "scholarship_url": str(clean_json_value(row.get("url", "")) or ""),
-                    "scholarship_purpose": str(clean_json_value(row.get("Purpose", "")) or ""),
-                    "match_score": round(blended_score, 3),
-                    "best_essay_prompt": str(clean_json_value(best_essay.get("prompt", "")) or ""),
-                    "best_essay_response": str(clean_json_value(best_essay.get("response", "")) or ""),
-                    "match_reason": str(rerank.get("match_reason", "") or ""),
-                    "eligibility_concern": str(rerank.get("eligibility_concern", "") or ""),
-                    "adaptation_advice": adaptation_advice,
-                })
-
-            except Exception as exc:
-                print("GPT rerank failed:", repr(exc))
-                results.append(base_result)
-
-        else:
-            results.append(base_result)
+        # GPT rerank/advice disabled for cost savings.
+        # This keeps the embedding-based match result and avoids chat completion calls.
+        results.append(base_result)
 
     seen_urls = set()
     deduped_results = []
 
     for result in results:
         key = result.get("scholarship_url") or result.get("scholarship_purpose")
-        if key in seen_urls or rejected_keys:
+        if key in seen_urls or key in rejected_keys:
             continue
         seen_urls.add(key)
         deduped_results.append(result)
@@ -721,7 +676,7 @@ Essay response:
 
     deduped_results = [
         r for r in deduped_results
-        if float(r.get("match_score", 0)) >= 0.55
+        if float(r.get("match_score", 0)) >= 0.50
     ]
 
     deduped_results.sort(key=lambda x: x.get("match_score", 0), reverse=True)
