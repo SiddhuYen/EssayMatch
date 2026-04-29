@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EssayMatch — Find scholarships your essays can win</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f7f5f0;
+      --surface: #ffffff;
+      --border: #e2ddd6;
+      --text: #1a1916;
+      --muted: #6b6860;
+      --accent: #2a5f4a;
+      --accent-light: #e8f2ee;
+      --accent-muted: #4a8c72;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    header {
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.35rem;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+    .logo span { color: var(--text); }
+
+    .step-indicator {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .step-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.3s;
+    }
+    .step-dot.active { background: var(--accent); }
+    .step-dot.done { background: var(--accent-muted); }
+
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 3.5rem 1.5rem 4rem;
+    }
+
+    h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2.6rem;
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+      font-weight: 400;
+    }
+    h1 em { font-style: italic; color: var(--accent); }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 2.5rem;
+      max-width: 460px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .form-row { margin-bottom: 1.4rem; }
+    .form-row:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 0.5rem;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 0.65rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+
+    .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .radio-btn {
+      padding: 0.45rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--bg);
+      color: var(--text);
+      user-select: none;
+    }
+    .radio-btn:hover { border-color: var(--accent-muted); }
+    .radio-btn.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .actions { display: flex; gap: 10px; margin-top: 2rem; align-items: center; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0.75rem 1.75rem;
+      border-radius: 999px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #1e4a38; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .privacy-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 1rem;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 3rem;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+    .feature-card h3 {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .feature-card p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 1.25rem;
+    }
+
+    @media (max-width: 480px) {
+      h1 { font-size: 2rem; }
+      .features { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Scholarship<span>Match</span></div>
+  <div class="step-indicator">
+    <div class="step-dot active"></div>
+    <div class="step-dot"></div>
+    <div class="step-dot"></div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="badge">Step 1 of 3 — Your Profile</div>
+  <h1>Your essays,<br><em>working harder.</em></h1>
+  <p class="subtitle">Tell us about yourself so we can find scholarships you're actually eligible for, then we'll pull your essays straight from Google Drive.</p>
+
+  <div class="card">
+    <div class="form-row">
+      <label>Are you a US citizen?</label>
+      <div class="radio-group" id="citizen-group">
+        <div class="radio-btn selected" data-value="true">Yes</div>
+        <div class="radio-btn" data-value="false">No</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>Level of study</label>
+      <div class="radio-group" id="level-group">
+        <div class="radio-btn selected" data-value="undergraduate">Undergraduate</div>
+        <div class="radio-btn" data-value="graduate">Graduate</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>State of residence</label>
+      <input type="text" id="state-input" placeholder="e.g. California" autocomplete="address-level1" />
+    </div>
+
+    <div class="form-row">
+      <label>Intended major</label>
+      <input type="text" id="major-input" placeholder="e.g. Neuroscience" />
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="continue-btn">Connect Google Drive →</button>
+  </div>
+  <p class="privacy-note">Only docs you explicitly select will be imported. Nothing is read without your choice.</p>
+
+  <div class="features">
+    <article class="feature-card">
+      <h3>Google Drive Picker</h3>
+      <p>Choose specific essay docs — nothing else is ever read.</p>
+    </article>
+    <article class="feature-card">
+      <h3>Semantic matching</h3>
+      <p>Embeddings find scholarships your essays actually fit.</p>
+    </article>
+    <article class="feature-card">
+      <h3>Adaptation advice</h3>
+      <p>Concrete tips on what to tweak for each scholarship.</p>
+    </article>
+  </div>
+</div>
+
+<script>
+  let citizen = 'true';
+  let level = 'undergraduate';
+
+  function setupRadioGroup(groupId, setter) {
+    const group = document.getElementById(groupId);
+    group.querySelectorAll('.radio-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        setter(btn.dataset.value);
+      });
+    });
+  }
+
+  setupRadioGroup('citizen-group', v => citizen = v);
+  setupRadioGroup('level-group', v => level = v);
+
+  document.getElementById('continue-btn').addEventListener('click', () => {
+    const state = document.getElementById('state-input').value.trim();
+    const major = document.getElementById('major-input').value.trim();
+
+    if (!state || !major) {
+      alert('Please fill in your state and intended major.');
+      return;
+    }
+
+    // Pass profile as query params — app.py picks them up before the OAuth redirect
+    const params = new URLSearchParams({ state_val: state, major, citizen, level });
+    window.location.href = `/auth/login?${params.toString()}`;
+  });
+</script>
+
+</body>
+</html>

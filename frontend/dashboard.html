@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EssayMatch — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <script>window.GOOGLE_CONFIG = {{ google_config | tojson }};</script>
+  <script async defer src="https://apis.google.com/js/api.js?onload=onGapiLoad"></script>
+  <script async defer src="https://accounts.google.com/gsi/client"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f7f5f0;
+      --surface: #ffffff;
+      --border: #e2ddd6;
+      --text: #1a1916;
+      --muted: #6b6860;
+      --accent: #2a5f4a;
+      --accent-light: #e8f2ee;
+      --accent-muted: #4a8c72;
+      --danger: #c0392b;
+      --danger-bg: #fef2f2;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      gap: 1rem;
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.35rem;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+      flex-shrink: 0;
+    }
+    .logo span { color: var(--text); }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    #user-line {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.55rem 1.2rem;
+      border-radius: 999px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #1e4a38; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger {
+      background: transparent;
+      border: 1px solid #fecaca;
+      color: var(--danger);
+      font-size: 13px;
+      padding: 0.35rem 0.8rem;
+    }
+    .btn-danger:hover { background: var(--danger-bg); }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    /* ── Status bar ── */
+    #status-box {
+      padding: 0.7rem 1rem;
+      border-radius: var(--radius-sm);
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 14px;
+      margin-bottom: 1.5rem;
+      transition: all 0.3s;
+    }
+    #status-box.error {
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+
+    /* ── Section titles ── */
+    .section-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+    .section-title em { font-style: italic; color: var(--accent); }
+    .section-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── Essay cards ── */
+    .essay-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 2rem; }
+
+    .essay-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .essay-card-body { flex: 1; min-width: 0; }
+    .essay-card-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .essay-card-meta { font-size: 12px; color: var(--muted); }
+
+    .essay-card-preview {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .empty-state {
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* ── Match CTA ── */
+    .match-cta {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    .match-cta-text { font-size: 14px; color: var(--muted); }
+    .match-cta-text strong { color: var(--text); display: block; font-size: 15px; margin-bottom: 2px; }
+
+    /* ── Loading ── */
+    #loading-section {
+      display: none;
+      text-align: center;
+      padding: 3rem 0;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1.25rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-steps { list-style: none; text-align: left; max-width: 280px; margin: 1.5rem auto 0; }
+    .loading-step {
+      padding: 0.35rem 0;
+      font-size: 14px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .loading-step::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .loading-step.done::before { background: var(--accent); }
+    .loading-step.active::before { background: var(--accent-muted); animation: pulse 1s ease infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* ── Results ── */
+    #results-section { display: none; }
+
+    .results-count {
+      display: inline-block;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 1.25rem;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+    .result-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+
+    .result-header {
+      padding: 1.1rem 1.4rem;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .match-score {
+      flex-shrink: 0;
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent);
+      margin-top: 2px;
+    }
+
+    .result-meta { flex: 1; min-width: 0; }
+    .result-purpose { font-size: 14px; font-weight: 500; margin-bottom: 3px; line-height: 1.4; }
+    .result-url { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .expand-icon {
+      flex-shrink: 0;
+      color: var(--muted);
+      font-size: 16px;
+      margin-top: 4px;
+      transition: transform 0.2s;
+    }
+    .result-card.expanded .expand-icon { transform: rotate(180deg); }
+
+    .result-body {
+      display: none;
+      padding: 0 1.4rem 1.4rem;
+      border-top: 1px solid var(--border);
+    }
+    .result-card.expanded .result-body { display: block; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin: 1.1rem 0 0.5rem;
+    }
+
+    .essay-box {
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1rem;
+      font-size: 13px;
+      line-height: 1.7;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .essay-prompt-tag {
+      display: inline-block;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 11px;
+      padding: 2px 9px;
+      border-radius: 999px;
+      margin-bottom: 0.6rem;
+      font-weight: 500;
+    }
+
+    .advice-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+    .advice-item { display: flex; gap: 10px; font-size: 13px; line-height: 1.6; align-items: flex-start; }
+    .advice-bullet {
+      width: 19px; height: 19px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .apply-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 1.1rem;
+      padding: 0.45rem 1rem;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+      background: transparent;
+    }
+    .apply-btn:hover { background: var(--accent); color: white; }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2rem 0;
+    }
+
+    @media (max-width: 520px) {
+      header { padding: 1rem; flex-wrap: wrap; }
+      .header-right { width: 100%; justify-content: flex-end; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Scholarship<span>Match</span></div>
+  <div class="header-right">
+    <span id="user-line">Loading…</span>
+    <button class="btn btn-ghost" id="pick-docs-btn" disabled>+ Add essays from Drive</button>
+    <button class="btn btn-ghost" id="logout-btn">Sign out</button>
+  </div>
+</header>
+
+<div class="container">
+  <div id="status-box">Loading your account…</div>
+
+  <!-- Essays section -->
+  <div id="essays-section">
+    <h2 class="section-title">Your <em>imported essays</em></h2>
+    <p class="section-sub" id="essays-sub">Loading…</p>
+    <div id="essay-list" class="essay-list"></div>
+  </div>
+
+  <!-- Match CTA — shown when essays exist -->
+  <div class="match-cta" id="match-cta" style="display:none;">
+    <div class="match-cta-text">
+      <strong>Ready to find scholarships?</strong>
+      We'll match all your imported essays against our scholarship database.
+    </div>
+    <button class="btn btn-primary" id="find-matches-btn">Find my scholarships →</button>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading-section">
+    <div class="spinner"></div>
+    <p style="font-size:15px; color:var(--muted);">Analyzing your essays…</p>
+    <ul class="loading-steps">
+      <li class="loading-step active" id="step-embed">Embedding your essays</li>
+      <li class="loading-step" id="step-match">Matching scholarships</li>
+      <li class="loading-step" id="step-advice">Generating adaptation advice</li>
+    </ul>
+  </div>
+
+  <!-- Results -->
+  <div id="results-section">
+    <hr class="divider" />
+    <h2 class="section-title">Your <em>matches</em></h2>
+    <p class="section-sub">Scholarships your essays can win. Click any to see what to change.</p>
+    <div class="results-count" id="results-count"></div>
+    <div id="results-list"></div>
+    <div style="margin-top:2rem;">
+      <button class="btn btn-ghost" id="clear-results-btn">← Back to essays</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Google Picker ──────────────────────────────────────────────────────────
+  let pickerApiLoaded = false;
+  let userProfile = {};
+
+  function onGapiLoad() {
+    if (window.gapi?.load) {
+      window.gapi.load('picker', {
+        callback: () => {
+          pickerApiLoaded = true;
+          document.getElementById('pick-docs-btn').disabled = false;
+        }
+      });
+    }
+  }
+  window.onGapiLoad = onGapiLoad;
+
+  // ── Utils ──────────────────────────────────────────────────────────────────
+  function setStatus(msg, isError = false) {
+    const el = document.getElementById('status-box');
+    el.textContent = msg;
+    el.classList.toggle('error', isError);
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  }
+
+  function safeUrl(url) {
+    const s = String(url || '').trim();
+    return s.startsWith('http://') || s.startsWith('https://') ? s : '#';
+  }
+
+  async function fetchJson(url, opts = {}) {
+    const res = await fetch(url, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      ...opts,
+    });
+    let data = null;
+    try { data = await res.json(); } catch { data = null; }
+    if (!res.ok) throw new Error(data?.error || `Request failed: ${res.status}`);
+    return data;
+  }
+
+  // ── Essays ─────────────────────────────────────────────────────────────────
+  function wordCount(text) {
+    return (text || '').trim().split(/\s+/).filter(Boolean).length;
+  }
+
+  function renderEssays(docs) {
+    docs = Array.isArray(docs) ? docs : [];
+  
+    const list = document.getElementById('essay-list');
+    const sub = document.getElementById('essays-sub');
+    const cta = document.getElementById('match-cta');
+  
+    if (!docs.length) {
+      list.innerHTML = '<div class="empty-state">No essays imported yet. Use "Add essays from Drive" to get started.</div>';
+      sub.textContent = '0 essays imported';
+      cta.style.display = 'none';
+      return;
+    }
+
+    sub.textContent = `${docs.length} essay${docs.length === 1 ? '' : 's'} imported · stored locally`;
+    cta.style.display = 'flex';
+
+    list.innerHTML = docs.map(doc => `
+      <div class="essay-card">
+        <div class="essay-card-body">
+          <div class="essay-card-title">${escapeHtml(doc.title)}</div>
+          <div class="essay-card-meta">
+            ${wordCount(doc.content)} words · imported ${escapeHtml(doc.importedAt || '')}
+          </div>
+          <div class="essay-card-preview">${escapeHtml((doc.content || '').slice(0, 200))}</div>
+        </div>
+        <button class="btn btn-danger" data-delete-id="${doc.id}">Delete</button>
+      </div>
+    `).join('');
+
+    document.querySelectorAll('[data-delete-id]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        try {
+          await fetchJson(`/api/documents/${btn.dataset.deleteId}`, { method: 'DELETE' });
+          setStatus('Essay deleted.');
+          await loadEssays();
+        } catch (err) {
+          setStatus(err.message, true);
+        }
+      });
+    });
+  }
+
+  async function loadEssays() {
+    const docs = await fetchJson('/api/documents');
+    renderEssays(docs);
+    return docs;
+  }
+
+  // ── Drive Picker ───────────────────────────────────────────────────────────
+  async function openPicker() {
+    if (!pickerApiLoaded || !window.google?.picker) {
+      setStatus('Picker still loading — try again in a moment.', true);
+      return;
+    }
+
+    try {
+      setStatus('Fetching Drive access token…');
+      const token = await fetchJson('/api/picker-token', { method: 'POST' });
+
+      const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(true)
+        .setOwnedByMe(true);
+
+      const picker = new google.picker.PickerBuilder()
+        .setAppId(token.appId)
+        .setOAuthToken(token.accessToken)
+        .setDeveloperKey(token.apiKey)
+        .addView(view)
+        .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+        .setSelectableMimeTypes(
+          'application/vnd.google-apps.document,application/vnd.google-apps.folder'
+        )
+        .setTitle('Choose essays or folders to import')
+        .setCallback(async data => {
+          if (data.action !== google.picker.Action.PICKED) return;
+
+          const picked = data.docs || [];
+          let total = 0;
+
+          for (const item of picked) {
+            try {
+              setStatus(`Importing "${item.name}"…`);
+              const result = await fetchJson('/api/import-doc', {
+                method: 'POST',
+                body: JSON.stringify({ fileId: item.id }),
+              });
+              total += result.count || 0;
+              if (result.count === 0) {
+                setStatus(result.message || `No docs found in ${item.name}.`, true);
+              }
+            } catch (err) {
+              setStatus(err.message, true);
+              return;
+            }
+          }
+
+          await loadEssays();
+          if (total > 0) {
+            setStatus(`Imported ${total} essay${total === 1 ? '' : 's'} successfully.`);
+          }
+        })
+        .build();
+
+      picker.setVisible(true);
+      setStatus('Ready.');
+    } catch (err) {
+      setStatus(err.message, true);
+    }
+  }
+
+  // ── Scholarship matching ───────────────────────────────────────────────────
+  function showLoadingSection(show) {
+    document.getElementById('loading-section').style.display = show ? 'block' : 'none';
+    document.getElementById('essays-section').style.display = show ? 'none' : 'block';
+    document.getElementById('match-cta').style.display = show ? 'none' : 'flex';
+    document.getElementById('results-section').style.display = 'none';
+  }
+
+  function showResultsSection() {
+    document.getElementById('loading-section').style.display = 'none';
+    document.getElementById('essays-section').style.display = 'block';
+    document.getElementById('match-cta').style.display = 'none';
+    document.getElementById('results-section').style.display = 'block';
+  }
+
+  async function runMatch() {
+    showLoadingSection(true);
+
+    const steps = {
+      embed: document.getElementById('step-embed'),
+      match: document.getElementById('step-match'),
+      advice: document.getElementById('step-advice'),
+    };
+
+    // Animate loading steps in parallel with real request
+    steps.embed.classList.add('active');
+    const t1 = setTimeout(() => {
+      steps.embed.classList.replace('active', 'done');
+      steps.match.classList.add('active');
+    }, 5000);
+    const t2 = setTimeout(() => {
+      steps.match.classList.replace('active', 'done');
+      steps.advice.classList.add('active');
+    }, 15000);
+
+    try {
+      const results = await fetchJson('/api/match', {
+        method: 'POST',
+        body: JSON.stringify({ profile: userProfile }),
+      });
+    
+      clearTimeout(t1); clearTimeout(t2);
+      Object.values(steps).forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+    
+      if (!Array.isArray(results)) {
+        console.log("Bad /api/match response:", results);
+        throw new Error(results?.error || "Match endpoint did not return an array.");
+      }
+    
+      renderResults(results);
+      showResultsSection();
+      setStatus(`Found ${results.length} scholarship matches.`);
+    }
+    catch (err) {
+      clearTimeout(t1); clearTimeout(t2);
+      showLoadingSection(false);
+      await loadEssays(); // re-render so CTA reappears
+      setStatus(err.message, true);
+    }
+  }
+
+  function parseAdvice(text) {
+    if (!text) return ['Review the scholarship requirements and tailor your essay.'];
+    const lines = text.split('\n').filter(l => l.trim());
+    return lines
+      .map(l => l.replace(/^[\d.\-*•]+\s*/, '').replace(/\*\*/g, '').trim())
+      .filter(l => l.length > 10)
+      .slice(0, 3);
+  }
+
+  function truncate(str, n) {
+    const s = typeof str === 'string' ? str : '';
+    return s.length > n ? s.slice(0, n) + '…' : s;
+  }
+
+  function renderResults(results) {
+    if (!Array.isArray(results)) {
+      throw new Error("Results must be an array.");
+    }
+
+    const list = document.getElementById('results-list');
+    document.getElementById('results-count').textContent = `${results.length} scholarships matched`;
+    list.innerHTML = '';
+
+    if (!results.length) {
+      list.innerHTML = '<div class="empty-state">No matches found. Check backend logs for why no scholarships passed filtering.</div>';
+      return;
+    }
+
+    results.forEach(r => {
+      const score = Math.round((r.match_score || 0) * 100);
+      const advice = parseAdvice(r.adaptation_advice);
+      const card = document.createElement('div');
+      card.className = 'result-card';
+      card.innerHTML = `
+        <div class="result-header">
+          <div class="match-score">${score}%</div>
+          <div class="result-meta">
+            <div class="result-purpose">${escapeHtml(r.scholarship_purpose || 'Scholarship opportunity')}</div>
+            <div class="result-url">${escapeHtml(r.scholarship_url || '')}</div>
+          </div>
+          <div class="expand-icon">↓</div>
+        </div>
+        <div class="result-body">
+          <div class="section-label">Best essay to use</div>
+          ${r.best_essay_prompt ? `<div class="essay-prompt-tag">${escapeHtml(truncate(r.best_essay_prompt, 80))}</div>` : ''}
+          <div class="essay-box">${escapeHtml(r.best_essay_response || '').replace(/\n/g, '<br>')}</div>
+          <div class="section-label">What to change</div>
+          <ul class="advice-list">
+            ${advice.map((line, i) => `
+              <li class="advice-item">
+                <div class="advice-bullet">${i + 1}</div>
+                <span>${escapeHtml(line)}</span>
+              </li>
+            `).join('')}
+          </ul>
+          <a class="apply-btn" href="${safeUrl(r.scholarship_url)}" target="_blank" rel="noopener noreferrer">View scholarship →</a>
+        </div>
+      `;
+
+      card.querySelector('.result-header').addEventListener('click', () => {
+        card.classList.toggle('expanded');
+      });
+
+      list.appendChild(card);
+    });
+  }
+
+  // ── Event listeners ────────────────────────────────────────────────────────
+  document.getElementById('pick-docs-btn').addEventListener('click', openPicker);
+
+  document.getElementById('find-matches-btn').addEventListener('click', runMatch);
+
+  document.getElementById('clear-results-btn').addEventListener('click', async () => {
+    document.getElementById('results-section').style.display = 'none';
+    document.getElementById('essays-section').style.display = 'block';
+    await loadEssays();
+    setStatus('Ready.');
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    try {
+      await fetchJson('/auth/logout', { method: 'POST' });
+      window.location.href = '/';
+    } catch (err) {
+      setStatus(err.message, true);
+    }
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  (async function init() {
+    try {
+      const me = await fetchJson('/api/me');
+      userProfile = me.profile || {};
+
+      const profileSummary = [
+        me.profile?.major ? `Major: ${me.profile.major}` : '',
+        me.profile?.state ? me.profile.state : '',
+      ].filter(Boolean).join(' · ');
+
+      document.getElementById('user-line').textContent =
+        `${me.name || me.email}${profileSummary ? '  ·  ' + profileSummary : ''}`;
+
+      await loadEssays();
+      setStatus('Ready.');
+    } catch (err) {
+      setStatus(err.message, true);
+    }
+  })();
+</script>
+
+</body>
+</html>

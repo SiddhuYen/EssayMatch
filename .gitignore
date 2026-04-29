@@ -1,0 +1,44 @@
+# ── Python ───────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+
+# ── Virtual env ─────────────────────────
+.venv/
+venv/
+env/
+
+# ── Environment variables ───────────────
+.env
+.env.*
+*.env
+
+# ── Mac / OS junk ───────────────────────
+.DS_Store
+
+# ── Logs ───────────────────────────────
+*.log
+
+# ── Instance / local DB ────────────────
+instance/
+*.db
+
+# ── Large data files (IMPORTANT) ───────
+data/
+*.npy
+*.csv
+
+# ── Build / cache ──────────────────────
+.cache/
+dist/
+build/
+
+# ── VS Code ────────────────────────────
+.vscode/
+
+# ── Misc ───────────────────────────────
+*.bak
+*.swp
