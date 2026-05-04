@@ -468,6 +468,35 @@
     const s = String(url || '').trim();
     return s.startsWith('http://') || s.startsWith('https://') ? s : '#';
   }
+  async function updateScholarshipButton() {
+    try {
+      const saved = await fetchJson('/api/saved-matches');
+      const matches = Array.isArray(saved.matches) ? saved.matches : [];
+  
+      const btn = document.getElementById('find-matches-btn');
+      const ctaText = document.querySelector('.match-cta-text');
+  
+      if (matches.length > 0) {
+        btn.textContent = 'View your scholarships →';
+        btn.dataset.mode = 'view';
+  
+        ctaText.innerHTML = `
+          <strong>Your scholarships are ready.</strong>
+          You have ${matches.length} saved match${matches.length === 1 ? '' : 'es'} from your last run.
+        `;
+      } else {
+        btn.textContent = 'Find my scholarships →';
+        btn.dataset.mode = 'match';
+  
+        ctaText.innerHTML = `
+          <strong>Ready to find scholarships?</strong>
+          We'll match all your imported essays against our scholarship database.
+        `;
+      }
+    } catch (err) {
+      console.log('Could not load saved matches:', err);
+    }
+  }
 
   async function fetchJson(url, opts = {}) {
     const res = await fetch(url, {
@@ -522,6 +551,7 @@
           await fetchJson(`/api/documents/${btn.dataset.deleteId}`, { method: 'DELETE' });
           setStatus('Essay deleted.');
           await loadEssays();
+          await updateScholarshipButton();
         } catch (err) {
           setStatus(err.message, true);
         }
@@ -585,6 +615,8 @@
           }
 
           await loadEssays();
+          await updateScholarshipButton();
+
           if (total > 0) {
             setStatus(`Imported ${total} essay${total === 1 ? '' : 's'} successfully.`);
           }
@@ -647,9 +679,8 @@
         throw new Error(results?.error || "Match endpoint did not return an array.");
       }
     
-      renderResults(results);
-      showResultsSection();
-      setStatus(`Found ${results.length} scholarship matches.`);
+      setStatus(`Found ${results.length} scholarship matches. Opening your scholarships…`);
+      window.location.href = '/scholarships'; 
     }
     catch (err) {
       clearTimeout(t1); clearTimeout(t2);
@@ -729,8 +760,16 @@
   // ── Event listeners ────────────────────────────────────────────────────────
   document.getElementById('pick-docs-btn').addEventListener('click', openPicker);
 
-  document.getElementById('find-matches-btn').addEventListener('click', runMatch);
+  document.getElementById('find-matches-btn').addEventListener('click', () => {
+    const btn = document.getElementById('find-matches-btn');
 
+    if (btn.dataset.mode === 'view') {
+      window.location.href = '/scholarships';
+      return;
+    }
+
+    runMatch();
+  });
   document.getElementById('clear-results-btn').addEventListener('click', async () => {
     document.getElementById('results-section').style.display = 'none';
     document.getElementById('essays-section').style.display = 'block';
@@ -762,6 +801,7 @@
         `${me.name || me.email}${profileSummary ? '  ·  ' + profileSummary : ''}`;
 
       await loadEssays();
+      await updateScholarshipButton();
       setStatus('Ready.');
     } catch (err) {
       setStatus(err.message, true);

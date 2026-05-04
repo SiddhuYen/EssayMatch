@@ -197,6 +197,15 @@ def init_db():
             UNIQUE(user_id, google_file_id),
             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         );
+        CREATE TABLE IF NOT EXISTS saved_matches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL UNIQUE,
+            results_json TEXT NOT NULL,
+            profile_json TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
     """)
     conn.commit()
     conn.close()
@@ -204,6 +213,71 @@ def init_db():
 
 init_db()
 
+def save_matches_for_user(user_id, results, profile):
+    conn = get_db()
+
+    conn.execute(
+        """
+        INSERT INTO saved_matches
+            (user_id, results_json, profile_json, created_at, updated_at)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+            results_json = excluded.results_json,
+            profile_json = excluded.profile_json,
+            updated_at = CURRENT_TIMESTAMP
+        """,
+        (
+            user_id,
+            json.dumps(results, ensure_ascii=False),
+            json.dumps(profile, ensure_ascii=False),
+        ),
+    )
+
+    conn.commit()
+    conn.close()
+
+
+def get_saved_matches_for_user(user_id):
+    conn = get_db()
+
+    row = conn.execute(
+        """
+        SELECT results_json, profile_json, updated_at
+        FROM saved_matches
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+
+    conn.close()
+
+    if not row:
+        return {
+            "matches": [],
+            "updatedAt": None,
+            "profile": {},
+        }
+
+    return {
+        "matches": json.loads(row["results_json"] or "[]"),
+        "profile": json.loads(row["profile_json"] or "{}"),
+        "updatedAt": row["updated_at"],
+    }
+
+
+def clear_saved_matches_for_user(user_id):
+    conn = get_db()
+
+    conn.execute(
+        """
+        DELETE FROM saved_matches
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    conn.commit()
+    conn.close()
 
 def login_required(fn):
     @wraps(fn)
@@ -1000,6 +1074,15 @@ def api_import_doc():
             })
 
         conn.commit()
+        conn.execute(
+            """
+            DELETE FROM saved_matches
+            WHERE user_id = ?
+            """,
+            (session["user_id"],),
+        )
+
+        conn.commit()
         conn.close()
 
         return jsonify({
@@ -1056,14 +1139,23 @@ def api_delete_document(doc_id):
         (doc_id, session["user_id"]),
     )
 
+    if cur.rowcount == 0:
+        conn.rollback()
+        conn.close()
+        return jsonify({"error": "Document not found"}), 404
+
+    conn.execute(
+        """
+        DELETE FROM saved_matches
+        WHERE user_id = ?
+        """,
+        (session["user_id"],),
+    )
+
     conn.commit()
     conn.close()
 
-    if cur.rowcount == 0:
-        return jsonify({"error": "Document not found"}), 404
-
     return jsonify({"ok": True})
-
 
 @app.route("/api/match", methods=["POST"])
 @login_required
@@ -1101,6 +1193,8 @@ def api_match():
 
         results = run_match(profile, essays_raw)
 
+        save_matches_for_user(session["user_id"], results, profile)
+
         return jsonify(results)
 
     except ValueError as exc:
@@ -1110,6 +1204,64 @@ def api_match():
         print("MATCH ERROR:", repr(exc))
         return jsonify({"error": str(exc)}), 500
 
+def api_match():
+    try:
+        payload = request.get_json(silent=True) or {}
+        profile = payload.get("profile", {})
+
+        conn = get_db()
+
+        rows = conn.execute(
+            """
+            SELECT title, content
+            FROM imported_documents
+            WHERE user_id = ? AND content != ''
+            """,
+            (session["user_id"],),
+        ).fetchall()
+
+        conn.close()
+
+        if not rows:
+            return jsonify({
+                "error": "No imported essays found. Please import some documents first."
+            }), 400
+
+        essays_raw = [
+            {
+                "text": row["content"],
+                "title": row["title"],
+            }
+            for row in rows
+            if row["content"].strip()
+        ]
+
+        results = run_match(profile, essays_raw)
+
+        save_matches_for_user(session["user_id"], results, profile)
+
+        return jsonify(results)
+
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    except Exception as exc:
+        print("MATCH ERROR:", repr(exc))
+        return jsonify({"error": str(exc)}), 500
+
+@app.route("/api/saved-matches")
+@login_required
+def api_saved_matches():
+    saved = get_saved_matches_for_user(session["user_id"])
+
+    return jsonify(saved)
+
+@app.route("/scholarships")
+def scholarships_page():
+    if not session.get("user_id"):
+        return redirect(url_for("index"))
+
+    return render_template("scholarships.html")
 
 @app.route("/health")
 def health():
